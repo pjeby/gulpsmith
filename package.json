@@ -1,0 +1,35 @@
+{
+  "name": "gulpsmith",
+  "version": "0.0.0",
+  "description": "Use gulp plugins in Metalsmith, or Metalsmith plugins in gulp",
+  "main": "gulpsmith.js",
+  "dependencies": {
+    "clone-stats": "0.0.1",
+    "highland": "^1.24.1",
+    "vinyl": "^0.2.3"
+  },
+  "peerDependencies": {
+    "metalsmith": "^0.8.0"
+  },
+  "devDependencies": {
+    "chai": "^1.9.1",
+    "gulp-mocha": "^0.4.1",
+    "coffee-script": "^1.7.1",
+    "gulp": "^3.6.2",
+    "mocha": "^1.18.2",
+    "gulp-coffee": "^1.4.3",
+    "sinon": "^1.9.1",
+    "sinon-chai": "^2.5.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "gulp",
+    "gulp-plugin",
+    "gulpfriendly",
+    "metalsmith"
+  ],
+  "author": "PJ Eby <pje@telecommunity.com>",
+  "license": "ISC"
+}
