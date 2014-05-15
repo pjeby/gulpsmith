@@ -3,12 +3,14 @@ should = should()
 chai.use require 'sinon-chai'
 
 gulpsmith = require './'
+{to_metal, to_vinyl} = (gulpsmith::)
+fs = require 'fs'
+{resolve, sep:pathsep} = require('path')
 File = require 'vinyl'
 _ = require 'highland'
 Metalsmith = require 'metalsmith'
 
 expect_fn = (item) -> expect(item).to.exist.and.be.a('function')
-
 {spy} = sinon = require 'sinon'
 
 spy.named = (name, args...) ->
@@ -21,7 +23,7 @@ compare_gulp = (infiles, transform, outfiles, done) ->
     .pipe(transform).toArray (files) ->
         transformed = {}
         for file in files
-            transformed[file.path] = file
+            transformed[file.relative] = file
         transformed.should.eql outfiles
         done()
 
@@ -33,11 +35,132 @@ compare_metal = (infiles, smith, outfiles, done) ->
             transformed.should.eql outfiles
             done()
 
+check_mode = (vinylmode, metalmode, original_vinyl=vinylmode) ->
+    (vinylmode & 4095).should.equal parseInt(metalmode, 8)
+    (vinylmode & ~4095).should.equal original_vinyl & ~4095
+
+describe "Metal -> Vinyl Conversion", ->
+
+    mf = mystat = null
+    before ->
+        mystat = fs.statSync('README.md')
+        mf = contents: Buffer(''), mode: (mystat.mode & 4095).toString(8)
+    
+    it "assigns a correct relative path", ->
+        to_vinyl("path1", mf).relative.should.equal "path1"
+        to_vinyl("README.src", mf).relative.should.equal "README.src"
+
+    it "converts Metalsmith .mode to Gulp .stat", ->
+        check_mode to_vinyl("README.md", mf).stat.mode, mf.mode        
+        mf.mode = (~parseInt(mf.mode, 8) & 4095).toString(8)
+        check_mode to_vinyl("README.md", mf).stat.mode, mf.mode
+
+    it "preserves Gulp mode high bits, while applying Metalsmith low bits", ->
+        mf.stat = mystat
+        mf.stat.mode ^= ~4095
+        check_mode to_vinyl("README.md", mf).stat.mode, mf.mode, mf.stat.mode
+        mf.mode = (~parseInt(mf.mode, 8) & 4095).toString(8)
+        check_mode to_vinyl("README.md", mf).stat.mode, mf.mode, mf.stat.mode
+
+    it "removes the Metalsmith.mode", ->
+        expect(to_vinyl("README.md", mf).mode).not.to.exist
+
+    it "assigns Metalsmith .contents to Gulp .contents", ->
+        to_vinyl("xyz", mf).contents.should.equal mf.contents
+        mf.contents = Buffer("blah blah blah")
+        to_vinyl("abc", mf).contents.should.eql Buffer("blah blah blah")
+
+    it "adds .cwd and .base to files (w/Metalsmith instance given)", ->
+        verify = (smith) ->
+            vf = to_vinyl("mnop", mf, smith)
+            vf.base.should.equal smith.source()
+            vf.cwd.should.equal smith.join()
+        verify smith = Metalsmith "/foo/bar"
+        verify smith.source "spoon"
+        verify Metalsmith __dirname
+
+
+    it "copies arbitrary attributes (exactly)"
+
+    it "adds a .metalsmith attribute (w/Metalsmith instance given)"
+
+    it "doesn't overwrite the .relative property on Vinyl files", ->
+        mf.relative = "ping!"
+        to_vinyl("pong/whiz", mf, Metalsmith __dirname)
+        .relative.should.equal "pong#{pathsep}whiz"
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+describe "Vinyl -> Metal Conversion", ->
+    gf = null
+    before -> gf = new File(
+        path: "README.md", contents: Buffer(''), stat: fs.statSync('README.md')
+    )
+    
+    it "throws an error for non-buffered (empty or stream) files", ->
+        expect(
+            -> to_metal new File(path:"foo.bar")
+        ).to.throw /foo\.bar/
+        expect(
+            -> to_metal new File(path:"spam.baz",
+                contents: fs.createReadStream('README.md')
+        )).to.throw /spam\.baz/
+
+    it "converts Gulp .stat to Metalsmith .mode", ->
+        (parseInt(to_metal(gf).mode, 8)&4095).should.equal gf.stat.mode & 4095
+        gf.stat.mode = ~gf.stat.mode
+        (parseInt(to_metal(gf).mode, 8)&4095).should.equal gf.stat.mode & 4095
+
+    it "assigns Gulp .contents to Metalsmith .contents", ->
+        to_metal(gf).contents.should.equal gf.contents
+        gf.contents = Buffer("blah blah blah")
+        to_metal(gf).contents.should.eql Buffer("blah blah blah")
+
+    it "copies arbitrary attributes (exactly)", ->
+        verify =
+            base: __dirname, cwd: __dirname, stat: gf.stat,
+            x: 1, y: z:2
+        gf.x = 1
+        gf.y = z: 2
+        res = to_metal(gf)
+        delete gf.contents
+        delete res.contents
+        delete res.mode
+        res.should.eql verify        
+
+    it "removes the .metalsmith attribute from Gulp files", ->
+        gf.metalsmith = "random stuff"
+        expect(to_metal(gf).metalsmith).to.not.exist
 
 describe "gulpsmith() streams", ->
 
@@ -85,8 +208,8 @@ describe "gulpsmith() streams", ->
         before ->
             s = gulpsmith()
             testfiles =
-                f1: new File(path:"f1", contents:Buffer('f1'))
-                f2: new File(path:"f2", contents:Buffer('f2'))
+                f1: new File(path:resolve("f1"), contents:Buffer('f1'))
+                f2: new File(path:resolve("f2"), contents:Buffer('f2'))
             testfiles.f1.a = "b"
             testfiles.f2.c = 3
     
@@ -99,19 +222,19 @@ describe "gulpsmith() streams", ->
 
         it "should add files added by a Metalsmith plugin", (done) -> 
             s = gulpsmith().use (f,s,d) -> f.f3 = contents:Buffer "f3"; d()
-            compare_gulp {}, s, {f3: new File path:"f3", contents:Buffer "f3"}, done
+            compare_gulp {}, s, {f3: new File path:resolve("f3"), base:__dirname, contents:Buffer "f3"}, done
 
         it "yields errors for non-buffered files"
-
         it "yields errors for errors produced by Metalsmith plugins"
+        it "converts Metalsmith files to Gulp"
+        it "converts Gulp files to Metalsmith"
 
-        it "converts Gulp .stat to Metalsmith .mode"
-        it "converts Metalsmith .mode to Gulp .stat"
-        it "converts Gulp .contents to Metalsmith .contents"
-        it "converts Metalsmith .contents to Gulp .contents"
 
-        it "adds .cwd and .base to Metalsmith-added files"
-        it "removes the .metalsmith attribute from files sent to Metalsmith"
+
+
+
+
+
 
 
 
@@ -147,7 +270,7 @@ describe "gulpsmith.pipe() plugins", ->
             compare_metal testfiles, smith.use(gulpsmith.pipe()), testfiles, done
 
         it "should delete files deleted by a Gulp plugin", (done) -> 
-            s = smith.use gulpsmith.pipe _.where path: 'f2'
+            s = smith.use gulpsmith.pipe _.where relative: 'f2'
             compare_metal testfiles, s, {f2:testfiles.f2}, done
 
         it "should add files added by a Gulp plugin", (done) ->
@@ -163,12 +286,12 @@ describe "gulpsmith.pipe() plugins", ->
 
 
         it "exits with any error yielded by a Gulp plugin"
-        it "adds a .metalsmith attribute to files seen by Gulp plugins"
-        it "removes the .metalsmith attribute from files returned to Metalsmith"
-        it "converts Gulp .stat to Metalsmith .mode"
-        it "converts Metalsmith .mode to Gulp .stat"
-        it "converts Gulp .contents to Metalsmith .contents"
-        it "converts Metalsmith .contents to Gulp .contents"
+        it "converts Metalsmith files to Gulp"
+        it "converts Gulp files to Metalsmith"
+
+
+
+
 
 
 

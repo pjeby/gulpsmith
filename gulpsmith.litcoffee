@@ -46,6 +46,7 @@ to/from ``vinyl`` File objects, and do mode/stats translations (via
     highland = require 'highland'
     File = require 'vinyl'
     clone_stats = require 'clone-stats'
+    {resolve} = require 'path'
 
 ### Table of Contents
 
@@ -58,7 +59,6 @@ to/from ``vinyl`` File objects, and do mode/stats translations (via
   * [Metalsmith Files To ``vinyl`` Files](#metalsmith-files-to-vinyl-files)
 
 <!-- toc stop -->
-
 
 
 
@@ -109,7 +109,7 @@ stored in a map for sending back to Metalsmith.
 
             outfiles = {}
             for file in fileArray
-                try outfiles[file.path] = to_metal(file)
+                try outfiles[file.relative] = gulpsmith::to_metal(file)
                 catch e then return error_handler(e)
 
 Assuming no errors occurred, we delete from Metalsmith's files any files
@@ -130,7 +130,7 @@ Now that the pipeline is ready, we can push our converted versions of all the
 Metalsmith files into its head end (stopping if an error happens at any point).
 
         for own path, file of files
-            pipeline.write to_vinyl(path, file, smith)
+            pipeline.write gulpsmith::to_vinyl(path, file, smith)
             break if error?
 
         pipeline.end()
@@ -176,7 +176,7 @@ skipped.
 
         stream = stream.reduce {}, (files, file) ->
             try
-                files[file.path] = to_metal(file)
+                files[file.relative] = gulpsmith::to_metal(file)
             catch err
                 pipeline.emit 'error', err
             return files
@@ -194,9 +194,9 @@ output is ended afterwards.
                     push(err)
                     next([])
                 else
-                    next(to_vinyl(path, file) for own path, file of files)
+                    next(gulpsmith::to_vinyl(relative, file) \
+                         for own relative, file of files)
                 return
-
 
 
 
@@ -209,6 +209,9 @@ Metalsmith and gulp use almost, but not quite, *completely different*
 conventions for their file objects.  Gulp uses ``vinyl`` instances, which know
 their own path information, and Metalsmith uses plain objects with a
 ``contents`` buffer, that intentionally do *not* know their own path info.
+Also, Metalsmith uses relative paths, while Gulp uses absolute ones.  Gulp uses
+``fs.stat`` objects, while Metalsmith uses octal mode strings that refer only
+to permissions!
 
 Basically, the ``contents`` buffer attribute is the *only* thing they have in
 common, and even there, Metalsmith uses a plain property that's always a
@@ -241,18 +244,15 @@ either direction*, only some general guidelines and heuristics.
 
 
 
-
-
-
 ### ``vinyl`` Files To Metalsmith Files
 
 Because ``vinyl`` files can be empty or streamed instead of buffered,
-``to_metal()`` raises an error if its argument isn't buffered.
+``gulpsmith::to_metal()`` raises an error if its argument isn't buffered.
 
-    to_metal = (vinyl_file) ->
+    gulpsmith::to_metal = (vinyl_file) ->
 
         if not vinyl_file.isBuffer()
-            throw new Error("Metalsmith needs buffered files: #{vinyl_file.path}")
+            throw new Error("Metalsmith needs buffered files: #{vinyl_file.relative}")
 
 The ``vinyl`` file's attributes are copied, skipping path information,
 any ``.metalsmith`` attribute, and the internal ``_contents`` attribute.  (The
@@ -266,11 +266,11 @@ along with a conversion from vinyl's ``stat`` to Metalsmith's ``mode``.)
                 metal_file[key] = val
 
         metal_file.contents = vinyl_file.contents
-        metal_file.mode = vinyl_file.stat.mode if vinyl_file.stat?.mode?
+        if vinyl_file.stat?.mode?
+            metal_file.mode = (
+                '0000'+ (vinyl_file.stat.mode & 4095).toString(8)
+            ).slice(-4)
         return metal_file
-
-
-
 
 
 
@@ -287,13 +287,13 @@ along with a conversion from vinyl's ``stat`` to Metalsmith's ``mode``.)
 
 ### Metalsmith Files To ``vinyl`` Files
 
-Since Metalsmith files don't know their own path, ``to_vinyl()`` needs a path
-as well as the file object, and an optional ``Metalsmith`` instance.
+Since Metalsmith files don't know their own path, ``gulpsmith::to_vinyl()``
+needs a path as well as the file object, and an optional ``Metalsmith``
+instance.
 
-    to_vinyl = (path, metal_file, smith) ->
+    gulpsmith::to_vinyl = (relative, metal_file, smith) ->
 
         opts = Object.create metal_file
-        opts.path = path
 
 In addition to a path, ``vinyl`` files need a ``cwd``, and ``base`` in order to
 function properly.  If these properties aren't on the input file, we can
@@ -303,6 +303,11 @@ Metalsmith file paths are relative to Metalsmith's source path.)
         if smith?
             opts.cwd ?= smith.join()
             opts.base ?= smith.source()
+        else
+            opts.cwd ?= process.cwd()
+            opts.base ?= opts.cwd
+
+        opts.path = resolve opts.base, relative
 
 The rest is just copying attributes and converting Metalsmith's ``mode`` to a
 ``vinyl`` ``stat``, if needed.  We skip any ``relative`` property because
@@ -311,18 +316,13 @@ property for the convenience of Gulp plugins being used inside a Metalsmith
 pipeline.
 
         if opts.mode?
-            opts.stat = clone_stats mode: opts.mode
+            opts.stat ?= clone_stats mode: parseInt(opts.mode, 8)
+            opts.stat.mode = (opts.stat.mode & ~4095) | parseInt(opts.mode, 8)
 
         vinyl_file = new File opts
-
         for own key, val of metal_file
-            vinyl_file[key] = val # XXX unless key is "relative"
+            vinyl_file[key] = val unless key is "relative" or key is "mode"
 
         vinyl_file.metalsmith = smith if smith?
         return vinyl_file
-
-
-
-
-
 
