@@ -80,7 +80,20 @@ describe "Metal -> Vinyl Conversion", ->
         verify Metalsmith __dirname
 
 
-    it "copies arbitrary attributes (exactly)"
+    it "copies arbitrary attributes (exactly)", ->
+        verify = new File(
+            base: __dirname, cwd: __dirname, stat: mystat, path:resolve "README.md"
+        )
+        mf.x = verify.x = 1
+        mf.y = verify.y = z: 2
+        res = to_vinyl("README.md", mf)
+        delete mf.contents
+        delete res._contents
+        delete verify._contents
+        delete res.stat
+        delete verify.stat
+        res.should.eql verify        
+
 
     it "adds a .metalsmith attribute (w/Metalsmith instance given)", ->
         to_vinyl("spam", mf, smith=Metalsmith __dirname)
@@ -90,19 +103,6 @@ describe "Metal -> Vinyl Conversion", ->
         mf.relative = "ping!"
         to_vinyl("pong/whiz", mf, Metalsmith __dirname)
         .relative.should.equal "pong#{pathsep}whiz"
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
