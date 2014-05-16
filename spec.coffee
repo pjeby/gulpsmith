@@ -82,14 +82,14 @@ describe "Metal -> Vinyl Conversion", ->
 
     it "copies arbitrary attributes (exactly)"
 
-    it "adds a .metalsmith attribute (w/Metalsmith instance given)"
+    it "adds a .metalsmith attribute (w/Metalsmith instance given)", ->
+        to_vinyl("spam", mf, smith=Metalsmith __dirname)
+        .metalsmith.should.equal smith
 
     it "doesn't overwrite the .relative property on Vinyl files", ->
         mf.relative = "ping!"
         to_vinyl("pong/whiz", mf, Metalsmith __dirname)
         .relative.should.equal "pong#{pathsep}whiz"
-
-
 
 
 
@@ -221,18 +221,59 @@ describe "gulpsmith() streams", ->
             compare_gulp testfiles, s, {f2:testfiles.f2}, done
 
         it "should add files added by a Metalsmith plugin", (done) -> 
-            s = gulpsmith().use (f,s,d) -> f.f3 = contents:Buffer "f3"; d()
-            compare_gulp {}, s, {f3: new File path:resolve("f3"), base:__dirname, contents:Buffer "f3"}, done
+            s = gulpsmith().use (files, smith,done) ->
+                files.f3 = contents:Buffer "f3"
+                done()
+            compare_gulp(
+                {}, s, f3: new File(
+                    path:resolve("f3"), base:__dirname, contents:Buffer "f3"
+                ), done
+            )
 
         it "yields errors for non-buffered files"
         it "yields errors for errors produced by Metalsmith plugins"
-        it "converts Metalsmith files to Gulp"
-        it "converts Gulp files to Metalsmith"
 
 
 
 
 
+
+
+
+
+
+
+
+        it "converts Gulp files to Metalsmith and back", (done) ->
+
+            vinyl_spy = spy.named 'vinyl_spy', gulpsmith::, 'to_vinyl'
+            metal_spy = spy.named 'metal_spy', gulpsmith::, 'to_metal'
+            err = metal_files = null
+
+            # Capture files coming into Metalsmith
+            catch_metal = (files, smith, done) ->
+                metal_files = files
+                done()
+
+            _(file for own path, file of testfiles)
+            .pipe(gulpsmith().use(catch_metal)).toArray (files) ->
+                try
+                    for file in files
+                        vinyl_spy.should.have.returned file
+                        metal_spy.should.have.been.calledWithExactly file
+
+                    for own relative, file of metal_files
+                        vinyl_spy.should.have.been
+                        .calledWithExactly relative, file
+
+                        metal_spy.should.have.returned file
+                catch err
+                    return done(err)
+                finally
+                    vinyl_spy.restore()
+                    metal_spy.restore()
+                done()
+            
 
 
 
@@ -286,39 +327,39 @@ describe "gulpsmith.pipe() plugins", ->
 
 
         it "exits with any error yielded by a Gulp plugin"
-        it "converts Metalsmith files to Gulp"
-        it "converts Gulp files to Metalsmith"
 
+        it "converts Metalsmith files to Gulp and back", (done) ->
 
+            vinyl_spy = spy.named 'vinyl_spy', gulpsmith::, 'to_vinyl'
+            metal_spy = spy.named 'metal_spy', gulpsmith::, 'to_metal'
+            vinyl_files = []
+        
+            # Capture files coming into Gulp
+            catch_vinyl = (file) ->
+                vinyl_files.push file
+                return file
 
+            smith = Metalsmith(__dirname)
+            smith.use(gulpsmith.pipe((_.map catch_vinyl)))
 
+            smith.run testfiles, (err, files) ->
+                return done(err) if err?
+                try
+                    for file in vinyl_files
+                        vinyl_spy.should.have.returned file
+                        metal_spy.should.have.been.calledWithExactly file
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                    for own relative, file of files
+                        vinyl_spy.should.have.been
+                        .calledWithExactly relative, file, smith
+                        metal_spy.should.have.returned file
+                catch err
+                    return done(err)
+                finally
+                    vinyl_spy.restore()
+                    metal_spy.restore()
+                done()
+            
 
 
 
