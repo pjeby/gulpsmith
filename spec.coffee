@@ -220,7 +220,7 @@ describe "gulpsmith() streams", ->
             compare_gulp testfiles, s, {f2:testfiles.f2}, done
 
         it "should add files added by a Metalsmith plugin", (done) -> 
-            s.use (files, smith,done) ->
+            s.use (files, smith, done) ->
                 files.f3 = contents:Buffer "f3"
                 done()
             compare_gulp(
@@ -231,20 +231,18 @@ describe "gulpsmith() streams", ->
 
         it "yields errors for non-buffered files (and continues)", (done) ->
             testfiles.f1.contents = null
-            s.on "error", (e) ->
-                try
-                    e.should.be.instanceOf Error
-                    e.message.should.match /buffered.*f1/
-                catch err
-                    done err
-                    done = ->
-            compare_gulp testfiles, s, {f2:testfiles.f2}, -> done()
+            done = should_error done, /buffered.*f1/
+            compare_gulp testfiles, s, {f2:testfiles.f2},
+                -> done new Error "No error caught"
+
+        it "yields errors for errors produced by Metalsmith plugins", (done) ->
+            error_message = "demo error!" 
+            s.use (files, smith, d) -> d new Error(error_message)
+            done = should_error done, error_message
+            _([]).pipe(s).toArray -> done Error "Error wasn't caught"
 
 
 
-
-        
-        it "yields errors for errors produced by Metalsmith plugins"
 
         it "converts Gulp files to Metalsmith and back", (done) ->
 
@@ -275,7 +273,50 @@ describe "gulpsmith() streams", ->
                     vinyl_spy.restore()
                     metal_spy.restore()
                 done()
+
+
+
+
+
+
+
+
+
+
+
             
+        should_error = (done, ematch, etype=Error) ->
+
+            s.on "error", (e) ->
+                try
+                    e.should.be.instanceOf Error
+                    if ematch?
+                        if ematch instanceof RegExp
+                            e.message.should.match ematch
+                        else
+                            e.message.should.equal ematch
+                    cb()
+                catch err
+                    cb(err)
+
+            return cb = ->
+                done arguments...
+                done = ->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -326,8 +367,6 @@ describe "gulpsmith.pipe() plugins", ->
 
 
 
-        it "exits with any error yielded by a Gulp plugin"
-
         it "converts Metalsmith files to Gulp and back", (done) ->
 
             vinyl_spy = spy.named 'vinyl_spy', gulpsmith::, 'to_vinyl'
@@ -360,6 +399,49 @@ describe "gulpsmith.pipe() plugins", ->
                     metal_spy.restore()
                 done()
             
+        it "exits with any error yielded by a Gulp plugin", (done) ->
+            message = "dummy error!"
+            smith.use gulpsmith.pipe _ (push) ->
+                push new Error message
+                push null, _.nil
+
+            done = should_error done, {}, message
+
+
+        it "exits with an error if a Gulp plugin yields an unbuffered file",
+        (done) ->
+            smith.use gulpsmith.pipe _.append new File(path: "README.md")
+            done = should_error done, {}, /buffered.*README.md/
+
+        should_error = (done, files, ematch, etype=Error) ->
+
+            smith.run files, (e, files) ->
+                try
+                    e.should.be.instanceOf Error
+                    if ematch?
+                        if ematch instanceof RegExp
+                            e.message.should.match ematch
+                        else
+                            e.message.should.equal ematch
+                    cb()
+                catch err
+                    cb(err)
+
+            return cb = ->
+                done arguments...
+                done = ->
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
