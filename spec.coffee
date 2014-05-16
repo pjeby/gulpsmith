@@ -42,7 +42,7 @@ check_mode = (vinylmode, metalmode, original_vinyl=vinylmode) ->
 describe "Metal -> Vinyl Conversion", ->
 
     mf = mystat = null
-    before ->
+    beforeEach ->
         mystat = fs.statSync('README.md')
         mf = contents: Buffer(''), mode: (mystat.mode & 4095).toString(8)
     
@@ -95,14 +95,14 @@ describe "Metal -> Vinyl Conversion", ->
         res.should.eql verify        
 
 
-    it "adds a .metalsmith attribute (w/Metalsmith instance given)", ->
-        to_vinyl("spam", mf, smith=Metalsmith __dirname)
-        .metalsmith.should.equal smith
-
     it "doesn't overwrite the .relative property on Vinyl files", ->
         mf.relative = "ping!"
         to_vinyl("pong/whiz", mf, Metalsmith __dirname)
         .relative.should.equal "pong#{pathsep}whiz"
+
+    it "doesn't overwrite any ``vinyl`` methods or properties"
+
+
 
 
 
@@ -123,7 +123,7 @@ describe "Metal -> Vinyl Conversion", ->
 
 describe "Vinyl -> Metal Conversion", ->
     gf = null
-    before -> gf = new File(
+    beforeEach -> gf = new File(
         path: "README.md", contents: Buffer(''), stat: fs.statSync('README.md')
     )
     
@@ -148,7 +148,6 @@ describe "Vinyl -> Metal Conversion", ->
 
     it "copies arbitrary attributes (exactly)", ->
         verify =
-            base: __dirname, cwd: __dirname, stat: gf.stat,
             x: 1, y: z:2
         gf.x = 1
         gf.y = z: 2
@@ -158,14 +157,15 @@ describe "Vinyl -> Metal Conversion", ->
         delete res.mode
         res.should.eql verify        
 
-    it "removes the .metalsmith attribute from Gulp files", ->
-        gf.metalsmith = "random stuff"
-        expect(to_metal(gf).metalsmith).to.not.exist
+
+
+
+
 
 describe "gulpsmith() streams", ->
 
     s = testfiles = null
-    before -> s = gulpsmith()
+    beforeEach -> s = gulpsmith()
 
     null_plugin = (files, smith, done) -> done()
 
@@ -174,7 +174,7 @@ describe "gulpsmith() streams", ->
         plugin2 = spy.named "plugin2", null_plugin
         it "returns self", -> expect(s.use(plugin1)).to.equal s
         it "invokes passed plugins during build", (done) ->
-            s.use(plugin2)
+            s.use(plugin1).use(plugin2)
             _([]).pipe(s).toArray ->
                 plugin1.should.be.calledOnce.and.calledBefore plugin2
                 plugin2.should.be.calledOnce.and.calledAfter plugin1
@@ -184,10 +184,10 @@ describe "gulpsmith() streams", ->
         data = {a: 1, b:2}
         it "returns self when setting", ->
             expect(s.metadata(data)).to.equal s
+
         it "returns matching metadata when getting", ->
+            s.metadata(data)
             expect(s.metadata()).to.eql data
-
-
 
 
 
@@ -205,8 +205,7 @@ describe "gulpsmith() streams", ->
 
     describe "streaming", ->
 
-        before ->
-            s = gulpsmith()
+        beforeEach ->
             testfiles =
                 f1: new File(path:resolve("f1"), contents:Buffer('f1'))
                 f2: new File(path:resolve("f2"), contents:Buffer('f2'))
@@ -214,14 +213,14 @@ describe "gulpsmith() streams", ->
             testfiles.f2.c = 3
     
         it "should yield the same files (if no plugins)", (done) ->
-            compare_gulp testfiles, s = gulpsmith(), testfiles, done
+            compare_gulp testfiles, s, testfiles, done
 
         it "should delete files deleted by a Metalsmith plugin", (done) -> 
-            s = gulpsmith().use (f,s,d) -> delete f.f1; d()
+            s.use (f,s,d) -> delete f.f1; d()
             compare_gulp testfiles, s, {f2:testfiles.f2}, done
 
         it "should add files added by a Metalsmith plugin", (done) -> 
-            s = gulpsmith().use (files, smith,done) ->
+            s.use (files, smith,done) ->
                 files.f3 = contents:Buffer "f3"
                 done()
             compare_gulp(
@@ -230,19 +229,22 @@ describe "gulpsmith() streams", ->
                 ), done
             )
 
-        it "yields errors for non-buffered files"
+        it "yields errors for non-buffered files (and continues)", (done) ->
+            testfiles.f1.contents = null
+            s.on "error", (e) ->
+                try
+                    e.should.be.instanceOf Error
+                    e.message.should.match /buffered.*f1/
+                catch err
+                    done err
+                    done = ->
+            compare_gulp testfiles, s, {f2:testfiles.f2}, -> done()
+
+
+
+
+        
         it "yields errors for errors produced by Metalsmith plugins"
-
-
-
-
-
-
-
-
-
-
-
 
         it "converts Gulp files to Metalsmith and back", (done) ->
 
@@ -283,8 +285,6 @@ describe "gulpsmith() streams", ->
 
 
 
-
-
 describe "gulpsmith.pipe() plugins", ->
 
     smith = testfiles = null
@@ -299,7 +299,7 @@ describe "gulpsmith.pipe() plugins", ->
 
     describe "streaming", ->
 
-        before ->
+        beforeEach ->
             smith = Metalsmith(process.cwd())
             testfiles =
                 f1: contents:Buffer('f1')
@@ -319,9 +319,9 @@ describe "gulpsmith.pipe() plugins", ->
             f3.x = "y"; f3.z = 42
             s = smith.use gulpsmith.pipe(_.append f3)
             compare_metal {}, s, {f3:  {
-                stat:null, base: process.cwd(), cwd: process.cwd(), 
                 x: "y", z:42, contents:Buffer "f3"
             }}, done
+
 
 
 

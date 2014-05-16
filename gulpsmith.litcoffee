@@ -91,9 +91,9 @@ through a Gulp pipeline back into Metalsmith.
 
 To handle errors, we define an error handler that can be invoked at most once.
 It works by passing the error on to the next step in the Metalsmith plugin
-chain (or ``run()/build()`` error handler).  It saves the error, so that other
-parts of the plugin know not to keep processing files afterwards, and not to
-call ``done()`` a second time.
+chain (or the ``run()/build()`` error handler).  It saves the error, so that
+other parts of the plugin know not to keep processing files afterwards, and not
+to call ``done()`` a second time.
 
         error = null
 
@@ -101,7 +101,7 @@ call ``done()`` a second time.
             if !error?
                 done error = e
             return
-        
+
 Each file received from the Gulp pipeline is converted to a Metalsmith file and
 stored in a map for sending back to Metalsmith.
 
@@ -226,23 +226,23 @@ front-matter data to a single ``frontMatter`` property by default.
 In short, there is no single, simple, canonical transformation possible *in
 either direction*, only some general guidelines and heuristics.
 
+All in all, the following property names must be considered reserved, and not
+available for use as arbitrary data values.  They are not copied from metal
+to vinyl file objects, or vice versa, except in cases where they are translated
+from another reserved property during conversion.  (``vinyl`` methods and
+getter/setters are also reserved, including ``contents`` and ``relative``.)
 
+    reserved_names = Object.create null,
+        path: value: yes
+        cwd: value: yes
+        base: value: yes
+        _contents: value: yes
+        mode: value: yes
+        stat: value: yes
+        metalsmith: value: yes
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    do -> (reserved_names[_prop]=true) \
+                for _prop in Object.getOwnPropertyNames(File::)
 
 ### ``vinyl`` Files To Metalsmith Files
 
@@ -254,15 +254,15 @@ Because ``vinyl`` files can be empty or streamed instead of buffered,
         if not vinyl_file.isBuffer()
             throw new Error("Metalsmith needs buffered files: #{vinyl_file.relative}")
 
-The ``vinyl`` file's attributes are copied, skipping path information,
-any ``.metalsmith`` attribute, and the internal ``_contents`` attribute.  (The
-path attribute needs to be removed because it can become stale as the file is
-processed by Metalsmith plugins, and the contents are transferred separately
-along with a conversion from vinyl's ``stat`` to Metalsmith's ``mode``.)
+The ``vinyl`` file's attributes are copied, skipping path information and any
+other reserved properties.  (The path properties need to be removed because it
+can become stale as the file is processed by Metalsmith plugins, and the
+contents are transferred separately along with a conversion from vinyl's
+``stat`` to Metalsmith's ``mode``.)
 
         metal_file = {}
         for own key, val of vinyl_file
-            unless key is "path" or key is "metalsmith" or key is "_contents"
+            unless key of reserved_names
                 metal_file[key] = val
 
         metal_file.contents = vinyl_file.contents
@@ -296,16 +296,17 @@ instance.
         opts = Object.create metal_file
 
 In addition to a path, ``vinyl`` files need a ``cwd``, and ``base`` in order to
-function properly.  If these properties aren't on the input file, we can
-simulate them if a ``Metalsmith`` instance is available.  (By assuming that
-Metalsmith file paths are relative to Metalsmith's source path.)
+function properly.  If a ``Metalsmith`` instance is available, we use it to
+simulate them.  (By assuming that Metalsmith file paths are relative to
+Metalsmith's source path.)  Otherwise, we pretend both are the process's
+current directory.
 
         if smith?
-            opts.cwd ?= smith.join()
-            opts.base ?= smith.source()
+            opts.cwd = smith.join()
+            opts.base = smith.source()
         else
-            opts.cwd ?= process.cwd()
-            opts.base ?= opts.cwd
+            opts.cwd = process.cwd()
+            opts.base = opts.cwd
 
         opts.path = resolve opts.base, relative
 
@@ -321,8 +322,7 @@ pipeline.
 
         vinyl_file = new File opts
         for own key, val of metal_file
-            vinyl_file[key] = val unless key is "relative" or key is "mode"
+            vinyl_file[key] = val unless key of reserved_names
 
-        vinyl_file.metalsmith = smith if smith?
         return vinyl_file
 

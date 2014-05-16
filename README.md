@@ -9,9 +9,11 @@
 
 ``gulpsmith().use(metal_plugin1).use(metal_plugin2)``... wraps one or more Metalsmith plugins for use in Gulp, whereas ``gulpsmith.pipe(stream1).pipe(stream2)``... turns a series of Gulp plugins (or ``vinyl`` streaming operations) into a plugin that can be passed to Metalsmith's ``.use()`` method.
 
-While a *perfect* translation between the two systems is impossible, ``gulpsmith`` does its best to be lossless in both directions.  The main areas where you may encounter problems are in the ``stat``/``mode`` attributes, and certain relative path information on the Gulp side.  (See [File Conversions and Compatibility](#cnc), below, for more details.)
+(In addition,``gulpsmith.pipe()`` is [Highland](http://highlandjs.org/)-friendly and lets you pass in Highland stream transforms and functions in place of Gulp plugins.) 
 
-### Contents
+While a *perfect* translation between Gulp and Metalsmith is impossible, ``gulpsmith`` does its best to be lossless and corruption-free in both directions.  When "corruption-free" and "lossless" are in conflict, however, ``gulpsmith`` prioritizes being "corruption-free".  That is, it chooses to drop conflicting properties during translation, rather than create problems downstream.  (See [File Conversions and Compatibility](#file-conversions-and-compatibility), below, for more details.)
+
+### Table of Contents
 
 <!-- toc -->
 
@@ -20,6 +22,7 @@ While a *perfect* translation between the two systems is impossible, ``gulpsmith
 
 
 * [Using a Gulp Pipeline as a Metalsmith Plugin](#using-a-gulp-pipeline-as-a-metalsmith-plugin)
+  * [Enhanced Features of ``gulpsmith.pipe()``](#enhanced-features-of-gulpsmithpipe)
   * [Advanced Pipelines and Error Handling](#advanced-pipelines-and-error-handling)
     * [Reusing Pipelines](#reusing-pipelines)
     * [Using Pre-assembled Pipelines](#using-pre-assembled-pipelines)
@@ -27,6 +30,9 @@ While a *perfect* translation between the two systems is impossible, ``gulpsmith
 
 
 * [File Conversions and Compatibilty](#file-conversions-and-compatibilty)
+  * [Reserved Properties](#reserved-properties)
+    * [Gulp Reserved Property Names](#gulp-reserved-property-names)
+    * [Metalsmith Reserved Properties:](#metalsmith-reserved-properties)
 
 <!-- toc stop -->
 
@@ -59,7 +65,6 @@ Example:
     .pipe(another_gulp_plugin(more_options))
     .pipe(gulp.dest("./build")
 
-
 ### Front Matter and File Properties
 
 Unlike Metalsmith, Gulp doesn't read YAML front matter by default.  So if you want the front matter to be available in Metalsmith, you will need to use the ``gulp-front-matter`` plugin, and insert something like this to promote the ``.frontMatter`` properties before piping to ``gulpsmith()``:
@@ -79,11 +84,11 @@ Unlike Metalsmith, Gulp doesn't read YAML front matter by default.  So if you wa
         .use(...)
     )
 
-This will extract the front matter and promote it to properties on the file, where Metalsmith expects to find it.  (Alternately, you could use ``gulp-append-data`` and the ``data`` property instead, to load data from ``.json`` files in place of YAML front matter!.)
+This will extract the front matter and promote it to properties on the file, where Metalsmith expects to find it.  (Alternately, you could use ``gulp-append-data`` and the ``data`` property instead, to load data from adjacent ``.json`` files in place of YAML front matter!)
 
 Of course, there are other Gulp plugins that add useful properties to files, and those properties will of course be available to your Metalsmith plugins as well.
 
-For example, if you pass some files through the ``gulp-jshint`` plugin before they go to Metalsmith, the Metalsmith plugins will see a ``jshint`` property on the files, with sub-properties for ``success``, ``errorCount``, etc.  If you use ``gulp-sourcemaps``, your files will have a ``sourceMap`` property, and so on.
+(For example, if you pass some files through the ``gulp-jshint`` plugin before they go to Metalsmith, the Metalsmith plugins will see a ``jshint`` property on the files, with sub-properties for ``success``, ``errorCount``, etc.  If you use ``gulp-sourcemaps``, your files will have a ``sourceMap`` property, and so on.)
 
 
 ## Using a Gulp Pipeline as a Metalsmith Plugin
@@ -109,6 +114,23 @@ In this usage pattern, there is no ``gulp.src()`` or ``gulp.dest()``, because Me
 
 (If you want to, though, you *can* include a ``gulp.dest()``, or any other Gulp output plugin in your pipeline.  Just make sure that you also do something to drop the written files from the resulting stream (e.g. using ``gulp-filter``), unless you want Metalsmith to *also* output the files itself.  Doing both can be useful if you use a Gulp plugin to upload files, but you also want Metalsmith to output a local copy.) 
 
+### Enhanced Features of ``gulpsmith.pipe()``
+
+Under the hood, ``gulpsmith.pipe()`` is a thin wrapper around Highland's ``_.pipeline()`` function.  This means that:
+
+* You can pass multiple plugins in (e.g. ``gulpsmith.pipe(plugin1, plugin2,...)``
+* You can pass in Highland transforms as plugins (e.g. using ``gulpsmith.pipe(_.where({published:true}))`` to pass through only posts with a true ``.published`` property.)
+* You can pass in functions that accept a Highland stream and return a modified version of it, e.g.:
+
+
+    gulpsmith.pipe( 
+        function(stream) { 
+            return stream.map(something).filter(otherthing); 
+        }
+    )
+
+In addition, Highland's error forwarding makes sure that errors in anything passed to ``gulpsmith.pipe()`` are passed on to Metalsmith.  (More on this in the next section.)
+
 
 ### Advanced Pipelines and Error Handling
 
@@ -116,17 +138,17 @@ If the pipeline you're using in Metalsmith is built strictly via a series of of 
 
 If you need to do something more complex, however, you need to be aware of three things:
 
-1. Unlike most Metalsmith plugins, Gulp plugins are *stateful* and **cannot** be used for more than one build run!
+1. Unlike most Metalsmith plugins, Gulp plugins/pipelines are *stateful* and **cannot** be used for more than one build run.
 
-2. If you pass a precomposed pipeline to ``gulpsmith.pipe()``, it may not report errors properly, thereby hanging or crashing your build if an error occurs!
+2. If you pass a precomposed pipeline to ``gulpsmith.pipe()``, it may not report errors properly, thereby hanging or crashing your build if an error occurs.
 
 3. Unlike the normal stream ``.pipe()`` method, ``gulpsmith.pipe()`` *does not return the piped stream*: it returns a Metalsmith plugin that just happens to also have a ``.pipe()`` method for further chaining.
 
-The following three sections will tell you what you need to know to apply or work around these issues. 
+The following three sub-sections will tell you what you need to know to apply or work around these issues. 
 
 #### Reusing Pipelines
 
-If you want to reuse the same Metalsmith instance over and over with the same Gulp pipeline, you must recreate the pipeline *on each run*.  (Sorry, that's just how Node streams work!)
+If you want to reuse the same Metalsmith instance over and over with the same Gulp pipeline embedded as a plugin, you must recreate the pipeline *on each run*.  (Sorry, that's just how Node streams work!)
 
 It's easy to do that though, if you need to.  Just write a short in-line plugin that re-creates the pipeline each time, like this:
 
@@ -142,17 +164,19 @@ It's easy to do that though, if you need to.  Just write a short in-line plugin 
     })
     .use(more_metalsmith_plugins())
 
-Make sure, however, that *all* of the Gulp plugins are created within the function passed to ``.use()``, or your pipeline will mysteriously drop files on the second and subsequent ``.run()`` or ``.build()``. 
+Make sure, however, that *all* of the Gulp plugins are *created* within the function passed to ``.use()``, or your pipeline may mysteriously drop files on the second and subsequent ``.run()`` or ``.build()``. 
 
 #### Using Pre-assembled Pipelines
 
-By default, the standard ``.pipe()`` method of Node stream objects does not chain errors forward to the destination stream.  This means that if you build a pipeline with the normal ``.pipe()`` method, you're going to run into problems if one of your source stream emits errors.
+By default, the standard ``.pipe()`` method of Node stream objects does not chain errors forward to the destination stream.  This means that if you build a pipeline with the normal ``.pipe()`` method of Gulp plugins, you're going to run into problems if one of your source stream emits errors.
 
 Specifically, your build process can hang, because as far as Gulp or Metalsmith are concerned, the build process is still running!  (If you've ever had a Gulp build mysteriously hang on you, you now know the likely reason why.)
 
 Fortunately for you, if you use ``gulpsmith.pipe()`` to build up your pipeline, it will automatically add an error handler to each stream, so that no matter where in the pipeline an error occurs, Metalsmith will be notified, and the build will end with an error instead of hanging indefinitely or crashing the process.
 
 However, if for some reason you *must* pass a pre-assembled pipeline into ``gulpsmith.pipe()``, you should probably add error handlers to any part of the pipeline that can generate errors.  These handlers should forward the error to the last stream in the pipeline, so that it can be forwarded to Metalsmith by ``gulpsmith.pipe()``.
+
+(Alternately, you could use Highland's ``_.pipeline()`` to construct your Gulp pipelines -- which can be a good idea, even when you're not using them in Metalsmith!)
 
 
 #### Stream Operations Other Than ``.pipe()``
@@ -184,7 +208,48 @@ In other words, you will need to perform any stream-specific operations directly
 (The same principle applies if you're saving a stream in a variable to use later: save the value being passed *in* to ``.pipe()``, instead of saving the *result* of calling ``.pipe()``.)
 
 
-## File Conversions and Compatibilty <a name="cnc"></a>
+## File Conversions and Compatibilty
 
-Regardless of whether you are using Gulp plugins in Metalsmith or vice versa, ``gulpsmith()`` must convert the file objects involved *twice*: once in each direction at either end of the plugin list.  For basic usage, you will probably not notice anything unusual, since Gulp plugins rarely do anything with file properties other than the path and contents, and Metalsmith plugins don't expect to do anything with ``vinyl`` file properties.
+Regardless of whether you are using Gulp plugins in Metalsmith or vice versa, ``gulpsmith()`` must convert the file objects involved *twice*: once in each direction at either end of the plugin list.  For basic usage, you will probably not notice anything unusual, since Gulp plugins rarely do anything with file properties other than the path and contents, and Metalsmith plugins don't usually expect to do anything with ``vinyl`` file properties.
 
+In particular, if you only use Gulp to pre- and post-process files for Metalsmith (whether it's by using Gulp plugins in Metalsmith or vice-versa), you will probably not encounter any problems with the conversions.  It's only if you use Gulp in the *middle* of your Metalsmith plugin list that you may run into issues with reserved properties. 
+
+
+### Reserved Properties
+
+Both Gulp and Metalsmith have certain file properties that have special meaning.  When translating between systems, ``gulpsmith`` *always* either **deletes** or **overwrites** them, so that they have correct values for the system where they have special meaning, and *do not exist* in the system where they don't.
+
+If you put data in *any* of the property names below from a system other than the one that reserves it, you will **lose** that data when the file is converted for use by the other system.
+
+That's because, when translating between systems, ``gulpsmith`` first *deletes* **all** of these properties, then adds back the ones that are needed for the target system, based on reserved information from the source system.
+
+So, if you have a Metalsmith file with a ``.base`` or ``.path`` (for example), those properties will **not** be used to create the Gulp ``.base`` or ``.path``.  They will simply be deleted, and replaced with suitable values calculated from Metalsmith's internal path information.
+
+(This is to avoid collision with any properties in your Metalsmith project that just *happened* to be named ``.base``, ``.path``, ``.relative``, etc., that could mess up Gulp plugins expecting these values to have their reserved meanings.)
+
+
+
+#### Gulp Reserved Property Names
+
+|Property       |Contents                                                |
+|---------------|--------------------------------------------------------|
+| ``.base``     |the directory from which the relative path is calculated|
+| ``.cwd``      |the original working directory when the file was created|
+| ``.path``     |the file's *absolute* filesystem path                   |
+| ``.relative`` |the file's ``.path``, *relative* to its ``.base``       |
+| ``.stat``     |the file's filesystem stat                              |
+| ``._contents``|private property for the file's contents                |
+| ``.isBuffer``     |method of ``vinyl`` file objects|
+| ``.isNull``       |method of ``vinyl`` file objects|
+| ``.isStream``     |method of ``vinyl`` file objects|
+| ``.isDirectory``  |method of ``vinyl`` file objects|
+| ``.pipe``         |method of ``vinyl`` file objects|
+| ``.inspect``      |method of ``vinyl`` file objects|
+| ``.clone``        |method of ``vinyl`` file objects|
+
+
+#### Metalsmith Reserved Properties:
+
+|Property |Contents                                 |
+|---------|-----------------------------------------|
+|``.mode``| A string specifying the file permissions|
