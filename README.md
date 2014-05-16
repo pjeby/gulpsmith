@@ -9,7 +9,7 @@
 
 ``gulpsmith().use(metal_plugin1).use(metal_plugin2)``... wraps one or more Metalsmith plugins for use in Gulp, whereas ``gulpsmith.pipe(stream1).pipe(stream2)``... turns a series of Gulp plugins (or ``vinyl`` streaming operations) into a plugin that can be passed to Metalsmith's ``.use()`` method.
 
-(In addition,``gulpsmith.pipe()`` is [Highland](http://highlandjs.org/)-friendly and lets you pass in Highland stream transforms and functions in place of Gulp plugins.) 
+(In addition,``gulpsmith.pipe()`` is [Highland](http://highlandjs.org/)-friendly and lets you pass in Highland stream transforms and functions as well as Gulp plugins.) 
 
 While a *perfect* translation between Gulp and Metalsmith is impossible, ``gulpsmith`` does its best to be lossless and corruption-free in both directions.  When "corruption-free" and "lossless" are in conflict, however, ``gulpsmith`` prioritizes being "corruption-free".  That is, it chooses to drop conflicting properties during translation, rather than create problems downstream.  (See [File Conversions and Compatibility](#file-conversions-and-compatibility), below, for more details.)
 
@@ -32,7 +32,7 @@ While a *perfect* translation between Gulp and Metalsmith is impossible, ``gulps
 * [File Conversions and Compatibilty](#file-conversions-and-compatibilty)
   * [Reserved Properties](#reserved-properties)
     * [Gulp Reserved Property Names](#gulp-reserved-property-names)
-    * [Metalsmith Reserved Properties:](#metalsmith-reserved-properties)
+    * [Metalsmith Reserved Property Names](#metalsmith-reserved-property-names)
 
 <!-- toc stop -->
 
@@ -140,9 +140,9 @@ If you need to do something more complex, however, you need to be aware of three
 
 1. Unlike most Metalsmith plugins, Gulp plugins/pipelines are *stateful* and **cannot** be used for more than one build run.
 
-2. If you pass a precomposed pipeline to ``gulpsmith.pipe()``, it may not report errors properly, thereby hanging or crashing your build if an error occurs.
+2. If you pass a *precomposed* pipeline of plugins to ``gulpsmith.pipe()``, it may not report errors properly, thereby hanging or crashing your build if an error occurs.
 
-3. Unlike the normal stream ``.pipe()`` method, ``gulpsmith.pipe()`` *does not return the piped stream*: it returns a Metalsmith plugin that just happens to also have a ``.pipe()`` method for further chaining.
+3. Unlike the normal stream ``.pipe()`` method, ``gulpsmith.pipe()`` *does not return the piped-to stream*: it returns a Metalsmith plugin that just happens to also have a ``.pipe()`` method for further chaining!
 
 The following three sub-sections will tell you what you need to know to apply or work around these issues. 
 
@@ -168,7 +168,7 @@ Make sure, however, that *all* of the Gulp plugins are *created* within the func
 
 #### Using Pre-assembled Pipelines
 
-By default, the standard ``.pipe()`` method of Node stream objects does not chain errors forward to the destination stream.  This means that if you build a pipeline with the normal ``.pipe()`` method of Gulp plugins, you're going to run into problems if one of your source stream emits errors.
+By default, the standard ``.pipe()`` method of Node stream objects does not chain errors forward to the destination stream.  This means that if you build a pipeline with the normal ``.pipe()`` method of Gulp plugins, you're going to run into problems if one of your source streams emits errors.
 
 Specifically, your build process can hang, because as far as Gulp or Metalsmith are concerned, the build process is still running!  (If you've ever had a Gulp build mysteriously hang on you, you now know the likely reason why.)
 
@@ -212,7 +212,7 @@ In other words, you will need to perform any stream-specific operations directly
 
 Regardless of whether you are using Gulp plugins in Metalsmith or vice versa, ``gulpsmith()`` must convert the file objects involved *twice*: once in each direction at either end of the plugin list.  For basic usage, you will probably not notice anything unusual, since Gulp plugins rarely do anything with file properties other than the path and contents, and Metalsmith plugins don't usually expect to do anything with ``vinyl`` file properties.
 
-In particular, if you only use Gulp to pre- and post-process files for Metalsmith (whether it's by using Gulp plugins in Metalsmith or vice-versa), you will probably not encounter any problems with the conversions.  It's only if you use Gulp in the *middle* of your Metalsmith plugin list that you may run into issues with reserved properties. 
+In particular, if you only use Gulp to pre- and post-process files for Metalsmith (whether it's by using Gulp plugins in Metalsmith or vice-versa), you will probably not encounter any problems with the conversions.  It's only if you use Gulp plugins in the *middle* of your Metalsmith plugin list that you may run into issues with reserved properties. 
 
 
 ### Reserved Properties
@@ -225,8 +225,11 @@ That's because, when translating between systems, ``gulpsmith`` first *deletes* 
 
 So, if you have a Metalsmith file with a ``.base`` or ``.path`` (for example), those properties will **not** be used to create the Gulp ``.base`` or ``.path``.  They will simply be deleted, and replaced with suitable values calculated from Metalsmith's internal path information.
 
-(This is to avoid collision with any properties in your Metalsmith project that just *happened* to be named ``.base``, ``.path``, ``.relative``, etc., that could mess up Gulp plugins expecting these values to have their reserved meanings.)
+This approach avoids collision with any properties in your Metalsmith project that just *happened* to be named ``.base``, ``.path``, ``.relative``, etc., that could mess up Gulp plugins expecting these values to have their reserved meanings.  (Similarly, when converting from Gulp to Metalsmith, these path properties will again be deleted, so that they don't confuse any Metalsmith plugins that are expecting, say, ``.path`` to be a URL path.)
 
+In short, ``gulpsmith`` prefers to possibly lose data (but do so every single time), rather than to pass through properties that might later corrupt a build when you begin using those properties for something else.
+
+(After all, if the properties are *always* removed, there is no way for you to have a build that *seems* to work most of the time, until suddenly it doesn't any more!)
 
 
 #### Gulp Reserved Property Names
@@ -248,7 +251,7 @@ So, if you have a Metalsmith file with a ``.base`` or ``.path`` (for example), t
 | ``.clone``        |method of ``vinyl`` file objects|
 
 
-#### Metalsmith Reserved Properties:
+#### Metalsmith Reserved Property Names
 
 |Property |Contents                                 |
 |---------|-----------------------------------------|
