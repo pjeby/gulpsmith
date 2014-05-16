@@ -317,10 +317,10 @@ property for the convenience of Gulp plugins being used inside a Metalsmith
 pipeline.
 
         if opts.mode?
-            opts.stat ?= clone_stats mode: parseInt(opts.mode, 8)
-            opts.stat.mode = (opts.stat.mode & ~4095) | parseInt(opts.mode, 8)
+            opts.stat = clone_stats mode: parseInt(opts.mode, 8)
 
         vinyl_file = new File opts
+
         for own key, val of metal_file
             vinyl_file[key] = val unless key of reserved_names
 

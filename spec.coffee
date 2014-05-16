@@ -35,16 +35,16 @@ compare_metal = (infiles, smith, outfiles, done) ->
             transformed.should.eql outfiles
             done()
 
-check_mode = (vinylmode, metalmode, original_vinyl=vinylmode) ->
-    (vinylmode & 4095).should.equal parseInt(metalmode, 8)
-    (vinylmode & ~4095).should.equal original_vinyl & ~4095
+check_mode = (vinylmode, metalmode) ->
+    (vinylmode).should.equal parseInt(metalmode, 8)
+
 
 describe "Metal -> Vinyl Conversion", ->
 
     mf = mystat = null
     beforeEach ->
         mystat = fs.statSync('README.md')
-        mf = contents: Buffer(''), mode: (mystat.mode & 4095).toString(8)
+        mf = contents: Buffer(''), mode: (mystat.mode).toString(8)
     
     it "assigns a correct relative path", ->
         to_vinyl("path1", mf).relative.should.equal "path1"
@@ -52,15 +52,8 @@ describe "Metal -> Vinyl Conversion", ->
 
     it "converts Metalsmith .mode to Gulp .stat", ->
         check_mode to_vinyl("README.md", mf).stat.mode, mf.mode        
-        mf.mode = (~parseInt(mf.mode, 8) & 4095).toString(8)
+        mf.mode = (~parseInt(mf.mode, 8)).toString(8)
         check_mode to_vinyl("README.md", mf).stat.mode, mf.mode
-
-    it "preserves Gulp mode high bits, while applying Metalsmith low bits", ->
-        mf.stat = mystat
-        mf.stat.mode ^= ~4095
-        check_mode to_vinyl("README.md", mf).stat.mode, mf.mode, mf.stat.mode
-        mf.mode = (~parseInt(mf.mode, 8) & 4095).toString(8)
-        check_mode to_vinyl("README.md", mf).stat.mode, mf.mode, mf.stat.mode
 
     it "removes the Metalsmith.mode", ->
         expect(to_vinyl("README.md", mf).mode).not.to.exist
@@ -80,6 +73,13 @@ describe "Metal -> Vinyl Conversion", ->
         verify Metalsmith __dirname
 
 
+
+
+
+
+
+
+
     it "copies arbitrary attributes (exactly)", ->
         verify = new File(
             base: __dirname, cwd: __dirname, stat: mystat, path:resolve "README.md"
@@ -94,21 +94,21 @@ describe "Metal -> Vinyl Conversion", ->
         delete verify.stat
         res.should.eql verify        
 
-
     it "doesn't overwrite the .relative property on Vinyl files", ->
         mf.relative = "ping!"
         to_vinyl("pong/whiz", mf, Metalsmith __dirname)
         .relative.should.equal "pong#{pathsep}whiz"
 
-    it "doesn't overwrite any ``vinyl`` methods or properties"
-
-
-
-
-
-
-
-
+    it "doesn't overwrite any ``vinyl`` methods or properties", ->
+        for own name of (File::)
+            mf[name] = "bad data for .#{name}"
+        for own name of new File()
+            mf[name] = "bad data for .#{name}"
+        vf = to_vinyl("what/ever", mf, Metalsmith __dirname)
+        for own name, prop of (File::)
+            expect(vf[name]).to.equal prop
+        for own name of vf
+            expect(vf[name]).to.not.equal "bad data for .#{name}"
 
 
 
@@ -157,10 +157,10 @@ describe "Vinyl -> Metal Conversion", ->
         delete res.mode
         res.should.eql verify        
 
-
-
-
-
+    it "doesn't keep any ``vinyl`` methods or properties", ->
+        to_metal(gf).should.not.have.property name for own name of (File::)
+        to_metal(gf).should.not.have.property name for own name of gf            
+        to_metal(gf).should.not.have.property "relative"
 
 describe "gulpsmith() streams", ->
 
@@ -188,18 +188,6 @@ describe "gulpsmith() streams", ->
         it "returns matching metadata when getting", ->
             s.metadata(data)
             expect(s.metadata()).to.eql data
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
