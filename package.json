@@ -29,7 +29,7 @@
   },
   "keywords": [
     "gulp",
-    "gulp-plugin",
+    "gulpplugin",
     "gulpfriendly",
     "metalsmith"
   ],
