@@ -1,6 +1,6 @@
 {
   "name": "gulpsmith",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Use gulp plugins in Metalsmith, or Metalsmith plugins in gulp",
   "repository":"git@github.com:pjeby/gulpsmith.git",
   "homepage": "https://github.com/pjeby/gulpsmith",
