@@ -3,7 +3,7 @@ should = should()
 chai.use require 'sinon-chai'
 
 gulpsmith = require './'
-{to_metal, to_vinyl} = (gulpsmith::)
+{to_metal, to_vinyl} = gulpsmith
 fs = require 'fs'
 {resolve, sep:pathsep} = require('path')
 File = require 'vinyl'
@@ -137,9 +137,9 @@ describe "Vinyl -> Metal Conversion", ->
         )).to.throw /spam\.baz/
 
     it "converts Gulp .stat to Metalsmith .mode", ->
-        (parseInt(to_metal(gf).mode, 8)&4095).should.equal gf.stat.mode & 4095
+        (parseInt(to_metal(gf).mode, 8)).should.equal gf.stat.mode & 4095
         gf.stat.mode = ~gf.stat.mode
-        (parseInt(to_metal(gf).mode, 8)&4095).should.equal gf.stat.mode & 4095
+        (parseInt(to_metal(gf).mode, 8)).should.equal gf.stat.mode & 4095
 
     it "assigns Gulp .contents to Metalsmith .contents", ->
         to_metal(gf).contents.should.equal gf.contents
@@ -191,6 +191,18 @@ describe "gulpsmith() streams", ->
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     describe "streaming", ->
 
         beforeEach ->
@@ -234,8 +246,8 @@ describe "gulpsmith() streams", ->
 
         it "converts Gulp files to Metalsmith and back", (done) ->
 
-            vinyl_spy = spy.named 'vinyl_spy', gulpsmith::, 'to_vinyl'
-            metal_spy = spy.named 'metal_spy', gulpsmith::, 'to_metal'
+            vinyl_spy = spy.named 'vinyl_spy', gulpsmith, 'to_vinyl'
+            metal_spy = spy.named 'metal_spy', gulpsmith, 'to_metal'
             err = metal_files = null
 
             # Capture files coming into Metalsmith
@@ -357,8 +369,8 @@ describe "gulpsmith.pipe() plugins", ->
 
         it "converts Metalsmith files to Gulp and back", (done) ->
 
-            vinyl_spy = spy.named 'vinyl_spy', gulpsmith::, 'to_vinyl'
-            metal_spy = spy.named 'metal_spy', gulpsmith::, 'to_metal'
+            vinyl_spy = spy.named 'vinyl_spy', gulpsmith, 'to_vinyl'
+            metal_spy = spy.named 'metal_spy', gulpsmith, 'to_metal'
             vinyl_files = []
         
             # Capture files coming into Gulp
