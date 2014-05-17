@@ -114,7 +114,7 @@ Metalsmith(__dirname)
 .build()
 ```
 
-From the point of view of the Gulp plugins, the file objects will have a ``cwd`` property equal to the Metalsmith base directory, and a ``base`` property equal to the Metalsmith source directory.  They will have a dummy ``stat`` property containing only the Metalsmith file's ``mode``, and a ``metalsmith`` property containing the Metalsmith instance.  They will also have any other properties that were attached to the file by Metalsmith or its plugins (e.g. from the files' YAML front matter).
+From the point of view of the Gulp plugins, the file objects will have a ``cwd`` property equal to the Metalsmith base directory, and a ``base`` property equal to the Metalsmith source directory.  They will have a dummy ``stat`` property containing only the Metalsmith file's ``mode``, along with any other data properties that were attached to the file by Metalsmith or its plugins (e.g. from the files' YAML front matter).
 
 In this usage pattern, there is no ``gulp.src()`` or ``gulp.dest()``, because Metalsmith handles the reading and writing of files.  If the Gulp pipeline drops or renames any of the input files, they will be dropped or renamed in the Metalsmith pipeline as well.
 
