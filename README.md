@@ -29,7 +29,7 @@ While a *perfect* translation between Gulp and Metalsmith is impossible, ``gulps
     * [Stream Operations Other Than ``.pipe()``](#stream-operations-other-than-pipe)
 
 
-* [File Conversions and Compatibilty](#file-conversions-and-compatibilty)
+* [File Conversions and Compatibilty](#file-conversions-and-compatibility)
   * [Reserved Properties](#reserved-properties)
     * [Gulp Reserved Property Names](#gulp-reserved-property-names)
     * [Metalsmith Reserved Property Names](#metalsmith-reserved-property-names)
@@ -208,7 +208,7 @@ In other words, you will need to perform any stream-specific operations directly
 (The same principle applies if you're saving a stream in a variable to use later: save the value being passed *in* to ``.pipe()``, instead of saving the *result* of calling ``.pipe()``.)
 
 
-## File Conversions and Compatibilty
+## File Conversions and Compatibility
 
 Regardless of whether you are using Gulp plugins in Metalsmith or vice versa, ``gulpsmith()`` must convert the file objects involved *twice*: once in each direction at either end of the plugin list.  For basic usage, you will probably not notice anything unusual, since Gulp plugins rarely do anything with file properties other than the path and contents, and Metalsmith plugins don't usually expect to do anything with ``vinyl`` file properties.
 
