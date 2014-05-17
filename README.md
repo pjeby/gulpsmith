@@ -48,41 +48,45 @@ Instead of reading from a source directory and writing to a destination director
 
 Example:
 
-    gulpsmith = require('gulpsmith');
+```javascript
+gulpsmith = require('gulpsmith');
 
-    gulp.src("./src/**/*")
-    .pipe(some_gulp_plugin(some_options))
-    .pipe(
-        gulpsmith()     // defaults to process.cwd() if no dir supplied
+gulp.src("./src/**/*")
+.pipe(some_gulp_plugin(some_options))
+.pipe(
+    gulpsmith()     // defaults to process.cwd() if no dir supplied
 
-        // You can initialize the metalsmith instance with metadata
-        .metadata({site_name: "My Site"})
+    // You can initialize the metalsmith instance with metadata
+    .metadata({site_name: "My Site"})
 
-        // and .use() as many Metalsmith plugins as you like 
-        .use(markdown())
-        .use(permalinks('posts/:title'))
-    )
-    .pipe(another_gulp_plugin(more_options))
-    .pipe(gulp.dest("./build")
+    // and .use() as many Metalsmith plugins as you like 
+    .use(markdown())
+    .use(permalinks('posts/:title'))
+)
+.pipe(another_gulp_plugin(more_options))
+.pipe(gulp.dest("./build")
+```
 
 ### Front Matter and File Properties
 
 Unlike Metalsmith, Gulp doesn't read YAML front matter by default.  So if you want the front matter to be available in Metalsmith, you will need to use the ``gulp-front-matter`` plugin, and insert something like this to promote the ``.frontMatter`` properties before piping to ``gulpsmith()``:
 
-    gulp_front_matter = require('gulp-front-matter');
-    assign = require('lodash.assign');
+```javascript
+gulp_front_matter = require('gulp-front-matter');
+assign = require('lodash.assign');
 
-    gulp.src("./src/**/*")
+gulp.src("./src/**/*")
 
-    .pipe(gulp_front_matter()).on("data", function(file) {
-        assign(file, file.frontMatter); 
-        delete file.frontMatter;
-    })
+.pipe(gulp_front_matter()).on("data", function(file) {
+    assign(file, file.frontMatter); 
+    delete file.frontMatter;
+})
 
-    .pipe(gulpsmith()
-        .use(...)
-        .use(...)
-    )
+.pipe(gulpsmith()
+    .use(...)
+    .use(...)
+)
+```
 
 This will extract the front matter and promote it to properties on the file, where Metalsmith expects to find it.  (Alternately, you could use ``gulp-append-data`` and the ``data`` property instead, to load data from adjacent ``.json`` files in place of YAML front matter!)
 
@@ -95,18 +99,20 @@ Of course, there are other Gulp plugins that add useful properties to files, and
 
 To use Gulp plugins or other streams as a Metalsmith plugin, simply begin the pipeline with ``gulpsmith.pipe()``:  
 
-    gulpsmith = require('gulpsmith')
+```javascript
+gulpsmith = require('gulpsmith')
 
-    Metalsmith(__dirname)
-    .use(drafts())
-    .use(markdown())
-    .use(gulpsmith
-        .pipe(some_gulp_plugin(some_options))
-        .pipe(another_gulp_plugin(more_options))
-        .pipe(as_many_as(you_like))
-    )
-    .use(more_metalsmith_plugins())
-    .build()
+Metalsmith(__dirname)
+.use(drafts())
+.use(markdown())
+.use(gulpsmith
+    .pipe(some_gulp_plugin(some_options))
+    .pipe(another_gulp_plugin(more_options))
+    .pipe(as_many_as(you_like))
+)
+.use(more_metalsmith_plugins())
+.build()
+```
 
 From the point of view of the Gulp plugins, the file objects will have a ``cwd`` property equal to the Metalsmith base directory, and a ``base`` property equal to the Metalsmith source directory.  They will have a dummy ``stat`` property containing only the Metalsmith file's ``mode``, and a ``metalsmith`` property containing the Metalsmith instance.  They will also have any other properties that were attached to the file by Metalsmith or its plugins (e.g. from the files' YAML front matter).
 
@@ -122,12 +128,13 @@ Under the hood, ``gulpsmith.pipe()`` is a thin wrapper around Highland's ``_.pip
 * You can pass in Highland transforms as plugins (e.g. using ``gulpsmith.pipe(_.where({published:true}))`` to pass through only posts with a true ``.published`` property.)
 * You can pass in functions that accept a Highland stream and return a modified version of it, e.g.:
 
-
-    gulpsmith.pipe( 
-        function(stream) { 
-            return stream.map(something).filter(otherthing); 
-        }
-    )
+```javascript
+gulpsmith.pipe( 
+    function(stream) { 
+        return stream.map(something).filter(otherthing); 
+    }
+)
+```
 
 In addition, Highland's error forwarding makes sure that errors in anything passed to ``gulpsmith.pipe()`` are passed on to Metalsmith.  (More on this in the next section.)
 
@@ -152,17 +159,19 @@ If you want to reuse the same Metalsmith instance over and over with the same Gu
 
 It's easy to do that though, if you need to.  Just write a short in-line plugin that re-creates the pipeline each time, like this:
 
-    Metalsmith(__dirname)
-    .use(drafts())
-    .use(markdown())
-    .use(function() {   // inline Metalsmith plugin...
-        return gulpsmith
-            .pipe(some_gulp_plugin(some_options))
-            .pipe(another_gulp_plugin(more_options))
-            .pipe(as_many_as(you_like))
-        .apply(this, arguments)  // that calls the gulpsmith-created plugin
-    })
-    .use(more_metalsmith_plugins())
+```javascript
+Metalsmith(__dirname)
+.use(drafts())
+.use(markdown())
+.use(function() {   // inline Metalsmith plugin...
+    return gulpsmith
+        .pipe(some_gulp_plugin(some_options))
+        .pipe(another_gulp_plugin(more_options))
+        .pipe(as_many_as(you_like))
+    .apply(this, arguments)  // that calls the gulpsmith-created plugin
+})
+.use(more_metalsmith_plugins())
+```
 
 Make sure, however, that *all* of the Gulp plugins are *created* within the function passed to ``.use()``, or your pipeline may mysteriously drop files on the second and subsequent ``.run()`` or ``.build()``. 
 
@@ -185,23 +194,27 @@ Because ``gulpsmith.pipe()`` returns a Metalsmith plugin rather than a stream, y
 
 For example, instead of doing this:
 
-    Metalsmith(__dirname)
-    .use(gulpsmith
-        .pipe(some_gulp_plugin(some_options))
-        .on("data", function(file){...})  // WRONG: this is not a stream!
-        .pipe(another_gulp_plugin(more_options))
-    )
+```javascript
+Metalsmith(__dirname)
+.use(gulpsmith
+    .pipe(some_gulp_plugin(some_options))
+    .on("data", function(file){...})  // WRONG: this is not a stream!
+    .pipe(another_gulp_plugin(more_options))
+)
+```
 
 You would need to do this instead:
 
-    Metalsmith(__dirname)
-    .use(gulpsmith
-        .pipe(
-            some_gulp_plugin(some_options)
-            .on("data", function(file){...})  // RIGHT
-        )        
-        .pipe(another_gulp_plugin(more_options))
-    )
+```javascript
+Metalsmith(__dirname)
+.use(gulpsmith
+    .pipe(
+        some_gulp_plugin(some_options)
+        .on("data", function(file){...})  // RIGHT
+    )        
+    .pipe(another_gulp_plugin(more_options))
+)
+```
 
 In other words, you will need to perform any stream-specific operations directly on the component streams, rather than relying on the output of ``.pipe()`` to return the stream you passed in.
 
