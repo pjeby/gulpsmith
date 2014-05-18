@@ -1,4 +1,4 @@
-# Mixing Gulp and Metalsmith with ``gulpsmith``
+# Gulp + Metalsmith = ``gulpsmith``
 
 ``gulpsmith`` lets you use [Gulp](http://gulpjs.com/) plugins (or ``vinyl`` pipelines) with Metalsmith, and use [Metalsmith](http://www.metalsmith.io/) plugins as part of a Gulp or ``vinyl`` pipeline.  This can be helpful if you:
 
