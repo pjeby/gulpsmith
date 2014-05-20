@@ -33,7 +33,8 @@ While a *perfect* translation between Gulp and Metalsmith is impossible, ``gulps
   * [Reserved Properties](#reserved-properties)
     * [Gulp Reserved Property Names](#gulp-reserved-property-names)
     * [Metalsmith Reserved Property Names](#metalsmith-reserved-property-names)
-
+  * [Gulp Directories and Metalsmith](#gulp-directories-and-metalsmith)
+  
 <!-- toc stop -->
 
 
@@ -225,8 +226,7 @@ In other words, you will need to perform any stream-specific operations directly
 
 Regardless of whether you are using Gulp plugins in Metalsmith or vice versa, ``gulpsmith()`` must convert the file objects involved *twice*: once in each direction at either end of the plugin list.  For basic usage, you will probably not notice anything unusual, since Gulp plugins rarely do anything with file properties other than the path and contents, and Metalsmith plugins don't usually expect to do anything with ``vinyl`` file properties.
 
-In particular, if you only use Gulp to pre- and post-process files for Metalsmith (whether it's by using Gulp plugins in Metalsmith or vice-versa), you will probably not encounter any problems with the conversions.  It's only if you use Gulp plugins in the *middle* of your Metalsmith plugin list that you may run into issues with reserved properties. 
-
+In particular, if you only use Gulp to pre- and post-process files for Metalsmith (whether it's by using Gulp plugins in Metalsmith or vice-versa), you will probably not encounter any problems with the conversions.  It's only if you use Gulp plugins in the *middle* of your Metalsmith plugin list that you may run into issues with reserved properties.
 
 ### Reserved Properties
 
@@ -269,3 +269,15 @@ In short, ``gulpsmith`` prefers to possibly lose data (but do so every single ti
 |Property |Contents                                 |
 |---------|-----------------------------------------|
 |``.mode``| A string specifying the file permissions|
+
+
+### Gulp Directories and Metalsmith
+
+Gulp is usually described as operating on streams of file objects.  But those file objects can also be *directories*: i.e., file objects whose ``.isDirectory()`` method returns true.  If you use a sufficiently broad wildcard in ``gulp.src()``, (e.g. ``**/*``) it will scoop up directories, as well as the files alongside them.
+
+Normally, you wouldn't notice this is happening, because most Gulp plugins (including ``gulp.dest()``!) basically ignore the directories and just process the files.
+
+Metalsmith also operates only on files, so Gulpsmith filters the directories out before they can reach Metalsmith, and it *does not restore them afterward*.
+
+If you happen to need a rare Gulp plugin that *does* do something with directories, you should probably put it before Gulpsmith in your pipeline, or use ``gulp-filter`` and its ``.restore`` option to sift the directories out ahead of Gulpsmith and put them back in afterwards.  
+

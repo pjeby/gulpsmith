@@ -175,10 +175,11 @@ skipped.
     gulp_stream = (smith) -> pipeline = highland.pipeline (stream) ->
 
         stream = stream.reduce {}, (files, file) ->
-            try
-                files[file.relative] = gulpsmith.to_metal(file)
-            catch err
-                pipeline.emit 'error', err
+            unless file.isDirectory()
+                try
+                    files[file.relative] = gulpsmith.to_metal(file) 
+                catch err
+                    pipeline.emit 'error', err
             return files
 
 Once all the files have arrived, we run them through our Metalsmith's ``run()``
@@ -197,7 +198,6 @@ output is ended afterwards.
                     next(gulpsmith.to_vinyl(relative, file) \
                             for own relative, file of files)
                 return
-
 
 
 

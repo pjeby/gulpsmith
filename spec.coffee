@@ -244,6 +244,10 @@ describe "gulpsmith() streams", ->
 
 
 
+        it "excludes Gulp directories", (done) ->
+            testfiles.f2.isDirectory = -> true
+            compare_gulp testfiles, s, {f1:testfiles.f1}, done
+
         it "converts Gulp files to Metalsmith and back", (done) ->
 
             vinyl_spy = spy.named 'vinyl_spy', gulpsmith, 'to_vinyl'
@@ -281,10 +285,6 @@ describe "gulpsmith() streams", ->
 
 
 
-
-
-
-            
         should_error = (done, ematch, etype=Error) ->
 
             s.on "error", (e) ->
