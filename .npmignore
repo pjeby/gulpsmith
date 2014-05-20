@@ -1,5 +1,6 @@
 .hgignore
 .hgtags
+*.md
 *.coffee
 *.litcoffee
 gulpfile.js
