@@ -19,16 +19,12 @@ While a *perfect* translation between Gulp and Metalsmith is impossible, ``gulps
 
 * [Using Metalsmith in a Gulp Pipeline](#using-metalsmith-in-a-gulp-pipeline)
   * [Front Matter and File Properties](#front-matter-and-file-properties)
-
-
 * [Using a Gulp Pipeline as a Metalsmith Plugin](#using-a-gulp-pipeline-as-a-metalsmith-plugin)
   * [Enhanced Features of ``gulpsmith.pipe()``](#enhanced-features-of-gulpsmithpipe)
   * [Advanced Pipelines and Error Handling](#advanced-pipelines-and-error-handling)
     * [Reusing Pipelines](#reusing-pipelines)
     * [Using Pre-assembled Pipelines](#using-pre-assembled-pipelines)
     * [Stream Operations Other Than ``.pipe()``](#stream-operations-other-than-pipe)
-
-
 * [File Conversions and Compatibilty](#file-conversions-and-compatibility)
   * [Reserved Properties](#reserved-properties)
     * [Gulp Reserved Property Names](#gulp-reserved-property-names)
@@ -266,9 +262,10 @@ In short, ``gulpsmith`` prefers to possibly lose data (but do so every single ti
 
 #### Metalsmith Reserved Property Names
 
-|Property |Contents                                 |
-|---------|-----------------------------------------|
-|``.mode``| A string specifying the file permissions|
+|Property  |Contents                                            |
+|----------|----------------------------------------------------|
+|``.mode`` | An octal string specifying the file permissions    |
+|``.stats``| the file's filesystem stat (NEW in Metalsmith 0.10)|
 
 
 ### Gulp Directories and Metalsmith

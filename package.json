@@ -1,6 +1,6 @@
 {
   "name": "gulpsmith",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "Use gulp plugins in Metalsmith, or Metalsmith plugins in gulp",
   "repository": "git@github.com:pjeby/gulpsmith.git",
   "homepage": "https://github.com/pjeby/gulpsmith",
@@ -11,7 +11,7 @@
     "vinyl": "^0.2.3"
   },
   "peerDependencies": {
-    "metalsmith": "^0.8.0||^0.9.0"
+    "metalsmith": "^0.10||^0.11"
   },
   "devDependencies": {
     "chai": "^1.9.1",

@@ -9,6 +9,7 @@ fs = require 'fs'
 File = require 'vinyl'
 _ = require 'highland'
 Metalsmith = require 'metalsmith'
+clone_stats = require 'clone-stats'
 
 expect_fn = (item) -> expect(item).to.exist.and.be.a('function')
 {spy} = sinon = require 'sinon'
@@ -38,7 +39,6 @@ compare_metal = (infiles, smith, outfiles, done) ->
 check_mode = (vinylmode, metalmode) ->
     (vinylmode).should.equal parseInt(metalmode, 8)
 
-
 describe "Metal -> Vinyl Conversion", ->
 
     mf = mystat = null
@@ -55,6 +55,22 @@ describe "Metal -> Vinyl Conversion", ->
         mf.mode = (~parseInt(mf.mode, 8)).toString(8)
         check_mode to_vinyl("README.md", mf).stat.mode, mf.mode
 
+    it "always ignores Metalsmith .stat", ->
+        delete mf.mode
+        mf.stat = mystat
+        expect(to_vinyl("README.md", mf).stat).to.not.exist
+
+    it "converts Metalsmith .stats to Gulp .stat", ->
+        delete mf.mode
+        mf.stats = mystat
+        to_vinyl("README.md", mf).stat.should.eql mystat
+
+    it "overrides the Gulp .stat.mode with the Metalsmith .mode", ->
+        cstat = clone_stats(mystat)
+        mf.stats = mystat
+        mf.mode = (cstat.mode = ~parseInt(mf.mode, 8)).toString(8)       
+        to_vinyl("README.md", mf).stat.should.eql cstat
+
     it "removes the Metalsmith.mode", ->
         expect(to_vinyl("README.md", mf).mode).not.to.exist
 
@@ -62,6 +78,7 @@ describe "Metal -> Vinyl Conversion", ->
         to_vinyl("xyz", mf).contents.should.equal mf.contents
         mf.contents = Buffer("blah blah blah")
         to_vinyl("abc", mf).contents.should.eql Buffer("blah blah blah")
+
 
     it "adds .cwd and .base to files (w/Metalsmith instance given)", ->
         verify = (smith) ->
@@ -72,26 +89,17 @@ describe "Metal -> Vinyl Conversion", ->
         verify smith.source "spoon"
         verify Metalsmith __dirname
 
-
-
-
-
-
-
-
-
     it "copies arbitrary attributes (exactly)", ->
         verify = new File(
             base: __dirname, cwd: __dirname, stat: mystat, path:resolve "README.md"
         )
         mf.x = verify.x = 1
         mf.y = verify.y = z: 2
+        mf.stats = mystat
         res = to_vinyl("README.md", mf)
         delete mf.contents
         delete res._contents
         delete verify._contents
-        delete res.stat
-        delete verify.stat
         res.should.eql verify        
 
     it "doesn't overwrite the .relative property on Vinyl files", ->
@@ -109,14 +117,6 @@ describe "Metal -> Vinyl Conversion", ->
             expect(vf[name]).to.equal prop
         for own name of vf
             expect(vf[name]).to.not.equal "bad data for .#{name}"
-
-
-
-
-
-
-
-
 
 
 
@@ -148,7 +148,7 @@ describe "Vinyl -> Metal Conversion", ->
 
     it "copies arbitrary attributes (exactly)", ->
         verify =
-            x: 1, y: z:2
+            x: 1, y: {z:2}, stats: gf.stat
         gf.x = 1
         gf.y = z: 2
         res = to_metal(gf)

@@ -177,7 +177,7 @@ skipped.
         stream = stream.reduce {}, (files, file) ->
             unless file.isDirectory()
                 try
-                    files[file.relative] = gulpsmith.to_metal(file) 
+                    files[file.relative] = gulpsmith.to_metal(file)
                 catch err
                     pipeline.emit 'error', err
             return files
@@ -239,10 +239,10 @@ getter/setters are also reserved, including ``contents`` and ``relative``.)
         _contents: value: yes
         mode: value: yes
         stat: value: yes
+        stats: value: yes
 
     do -> (reserved_names[_prop]=true) \
                 for _prop in Object.getOwnPropertyNames(File::)
-
 
 ### ``vinyl`` Files To Metalsmith Files
 
@@ -260,7 +260,7 @@ The ``vinyl`` file's attributes are copied, skipping path information and any
 other reserved properties.  (The path properties need to be removed because
 they can become stale as the file is processed by Metalsmith plugins, and the
 contents are transferred separately along with a conversion from vinyl's
-``stat`` to Metalsmith's ``mode``.)
+``stat`` to Metalsmith's ``stats`` and ``mode``.)
 
         metal_file = {}
         for own key, val of vinyl_file
@@ -269,14 +269,14 @@ contents are transferred separately along with a conversion from vinyl's
 
         metal_file.contents = vinyl_file.contents
 
-        if vinyl_file.stat?.mode?
-            metal_file.mode = (
-                '0000'+ (vinyl_file.stat.mode & 4095).toString(8)
-            ).slice(-4)
+        if (stats = vinyl_file.stat)?
+            metal_file.stats = stats
+            if stats.mode?
+                metal_file.mode = (
+                    '0000'+ (vinyl_file.stat.mode & 4095).toString(8)
+                ).slice(-4)
 
         return metal_file
-
-
 
 
 
@@ -310,19 +310,19 @@ current directory.
 
         opts.path = resolve opts.base, relative
 
-The rest is just copying attributes and converting Metalsmith's ``mode`` to a
-``vinyl`` ``.stat``, if needed.  We skip any ``.relative`` property because
-it's not writable on ``vinyl`` files, and we skip all other reserved names
-to prevent confusion and data corruption.
+The rest is just copying attributes and converting Metalsmith's ``mode`` and
+``stats`` to a ``vinyl`` ``.stat``, if needed.  We skip any ``.relative``
+property because it's not writable on ``vinyl`` files, and we skip all other
+reserved names to prevent confusion and data corruption.
 
-        if opts.mode?
-            opts.stat = clone_stats mode: parseInt(opts.mode, 8)
+        opts.stat = null
+        if opts.stats? or opts.mode?
+            opts.stat = clone_stats opts.stats ? {}
+            opts.stat.mode = parseInt(opts.mode, 8) if opts.mode?
 
         vinyl_file = new File opts
-
         for own key, val of metal_file
             vinyl_file[key] = val unless key of reserved_names
 
         return vinyl_file
-
 
