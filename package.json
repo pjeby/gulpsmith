@@ -5,6 +5,7 @@
   "repository": "git@github.com:pjeby/gulpsmith.git",
   "homepage": "https://github.com/pjeby/gulpsmith",
   "main": "gulpsmith.js",
+  "files": ["gulpsmith.js"],
   "dependencies": {
     "clone-stats": "0.0.1",
     "highland": "^1.24.1",
