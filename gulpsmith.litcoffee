@@ -302,7 +302,7 @@ Metalsmith's source path.)  Otherwise, we pretend both are the process's
 current directory.
 
         if smith?
-            opts.cwd = smith.join()
+            opts.cwd = if smith.join then smith.join() else smith.path()
             opts.base = smith.source()
         else
             opts.cwd = process.cwd()

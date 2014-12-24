@@ -84,7 +84,7 @@ describe "Metal -> Vinyl Conversion", ->
         verify = (smith) ->
             vf = to_vinyl("mnop", mf, smith)
             vf.base.should.equal smith.source()
-            vf.cwd.should.equal smith.join()
+            vf.cwd.should.equal (if smith.join then smith.join() else smith.path())
         verify smith = Metalsmith "/foo/bar"
         verify smith.source "spoon"
         verify Metalsmith __dirname
