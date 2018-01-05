@@ -293,7 +293,7 @@ instance.
 
     gulpsmith.to_vinyl = (relative, metal_file, smith) ->
 
-        opts = Object.create metal_file
+        opts = { contents: metal_file.contents }
 
 In addition to a path, ``vinyl`` files need a ``cwd``, and ``base`` in order to
 function properly.  If a ``Metalsmith`` instance is available, we use it to
@@ -316,9 +316,9 @@ property because it's not writable on ``vinyl`` files, and we skip all other
 reserved names to prevent confusion and data corruption.
 
         opts.stat = null
-        if opts.stats? or opts.mode?
-            opts.stat = clone_stats opts.stats ? {}
-            opts.stat.mode = parseInt(opts.mode, 8) if opts.mode?
+        if metal_file.stats? or metal_file.mode?
+            opts.stat = clone_stats metal_file.stats ? {}
+            opts.stat.mode = parseInt(metal_file.mode, 8) if metal_file.mode?
 
         vinyl_file = new File opts
         for own key, val of metal_file
