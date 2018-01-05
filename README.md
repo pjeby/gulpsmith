@@ -266,7 +266,6 @@ In short, ``gulpsmith`` prefers to possibly lose data (but do so every single ti
 | **``.isSymbolic``** |method of ``vinyl`` file objects|
 | **``.isVinyl``**  |method of ``vinyl`` file objects|
 | ``.isDirectory``  |method of ``vinyl`` file objects|
-| ``.pipe``         |method of ``vinyl`` file objects|
 | ``.inspect``      |method of ``vinyl`` file objects|
 | ``.clone``        |method of ``vinyl`` file objects|
 
