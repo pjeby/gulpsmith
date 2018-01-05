@@ -240,6 +240,11 @@ getter/setters are also reserved, including ``contents`` and ``relative``.)
         mode: value: yes
         stat: value: yes
         stats: value: yes
+        history: value: yes
+        _cwd: value: yes
+        _isVinyl: value: yes
+        _symlink: value: yes
+        _base: value: yes
 
     do -> (reserved_names[_prop]=true) \
                 for _prop in Object.getOwnPropertyNames(File::)
@@ -277,11 +282,6 @@ contents are transferred separately along with a conversion from vinyl's
                 ).slice(-4)
 
         return metal_file
-
-
-
-
-
 
 
 
