@@ -233,21 +233,16 @@ from another reserved property during conversion.  (``vinyl`` methods and
 getter/setters are also reserved, including ``contents`` and ``relative``.)
 
     reserved_names = Object.create null,
-        path: value: yes
-        cwd: value: yes
-        base: value: yes
         _contents: value: yes
         mode: value: yes
-        stat: value: yes
         stats: value: yes
-        history: value: yes
-        _cwd: value: yes
-        _isVinyl: value: yes
-        _symlink: value: yes
         _base: value: yes
 
     do -> (reserved_names[_prop]=true) \
-                for _prop in Object.getOwnPropertyNames(File::)
+                for _prop in (
+                    Object.getOwnPropertyNames(File::).concat Object.getOwnPropertyNames(new File())
+                )
+
 
 ### ``vinyl`` Files To Metalsmith Files
 
@@ -282,6 +277,11 @@ contents are transferred separately along with a conversion from vinyl's
                 ).slice(-4)
 
         return metal_file
+
+
+
+
+
 
 
 
