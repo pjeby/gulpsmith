@@ -243,17 +243,28 @@ In short, ``gulpsmith`` prefers to possibly lose data (but do so every single ti
 
 #### Gulp Reserved Property Names
 
+**Bold** names are new in gulpsmith 0.6.0, due to use of vinyl 2.x for compatibility with Gulp 4.
+
 |Property       |Contents                                                |
 |---------------|--------------------------------------------------------|
 | ``.base``     |the directory from which the relative path is calculated|
+| **``.basename``** |the filename without its path                       |
 | ``.cwd``      |the original working directory when the file was created|
+| **``.dirname``**  |the directory portion of ``path``                   |
+| **``.extname``**  |the file extension                                  |
+| **``.history``**  |history of ``.path`` values                         |
 | ``.path``     |the file's *absolute* filesystem path                   |
 | ``.relative`` |the file's ``.path``, *relative* to its ``.base``       |
 | ``.stat``     |the file's filesystem stat                              |
+| **``.stem``**    |the file's ``.basename``, minus its extension        |
+| **``.symlink``** |the file's symlink target, if applicable             |
 | ``._contents``|private property for the file's contents                |
 | ``.isBuffer``     |method of ``vinyl`` file objects|
+| **``.isCustomProp``** |method of ``vinyl`` file objects|
 | ``.isNull``       |method of ``vinyl`` file objects|
 | ``.isStream``     |method of ``vinyl`` file objects|
+| **``.isSymbolic``** |method of ``vinyl`` file objects|
+| **``.isVinyl``**  |method of ``vinyl`` file objects|
 | ``.isDirectory``  |method of ``vinyl`` file objects|
 | ``.pipe``         |method of ``vinyl`` file objects|
 | ``.inspect``      |method of ``vinyl`` file objects|
