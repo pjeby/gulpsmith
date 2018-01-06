@@ -13,6 +13,8 @@
 
 While a *perfect* translation between Gulp and Metalsmith is impossible, ``gulpsmith`` does its best to be lossless and corruption-free in both directions.  When "corruption-free" and "lossless" are in conflict, however, ``gulpsmith`` prioritizes being "corruption-free".  That is, it chooses to drop conflicting properties during translation, rather than create problems downstream.  (See [File Conversions and Compatibility](#file-conversions-and-compatibility), below, for more details.)
 
+**Important**: starting with gulpsmith 0.6.0, gulp files are created using vinyl 2.1, which means that the list of dropped properties has changed, and the list in this document may not be accurate for vinyl versions > 2.1.  You may need to stay on gulpsmith 0.5.5 if your project uses any of the new reserved property names (like `history`) as metalsmith properties.  But if your project uses gulp 4, upgrading to gulpsmith 0.6.0 is required.
+
 ### Table of Contents
 
 <!-- toc -->
@@ -30,7 +32,7 @@ While a *perfect* translation between Gulp and Metalsmith is impossible, ``gulps
     * [Gulp Reserved Property Names](#gulp-reserved-property-names)
     * [Metalsmith Reserved Property Names](#metalsmith-reserved-property-names)
   * [Gulp Directories and Metalsmith](#gulp-directories-and-metalsmith)
-  
+
 <!-- toc stop -->
 
 
