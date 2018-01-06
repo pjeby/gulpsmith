@@ -13,6 +13,8 @@
 
 While a *perfect* translation between Gulp and Metalsmith is impossible, ``gulpsmith`` does its best to be lossless and corruption-free in both directions.  When "corruption-free" and "lossless" are in conflict, however, ``gulpsmith`` prioritizes being "corruption-free".  That is, it chooses to drop conflicting properties during translation, rather than create problems downstream.  (See [File Conversions and Compatibility](#file-conversions-and-compatibility), below, for more details.)
 
+**Important**: starting with gulpsmith 0.6.0, gulp files are created using vinyl 2.1, which means that the list of dropped properties has changed, and the list in this document may not be accurate for vinyl versions > 2.1.  You may need to stay on gulpsmith 0.5.5 if your project uses any of the new reserved property names (like `history`) as metalsmith properties.  But if your project uses gulp 4, upgrading to gulpsmith 0.6.0 is required.
+
 ### Table of Contents
 
 <!-- toc -->
@@ -30,7 +32,7 @@ While a *perfect* translation between Gulp and Metalsmith is impossible, ``gulps
     * [Gulp Reserved Property Names](#gulp-reserved-property-names)
     * [Metalsmith Reserved Property Names](#metalsmith-reserved-property-names)
   * [Gulp Directories and Metalsmith](#gulp-directories-and-metalsmith)
-  
+
 <!-- toc stop -->
 
 
@@ -243,19 +245,29 @@ In short, ``gulpsmith`` prefers to possibly lose data (but do so every single ti
 
 #### Gulp Reserved Property Names
 
+**Bold** names are new in gulpsmith 0.6.0, due to use of vinyl 2.x for compatibility with Gulp 4.
+
 |Property       |Contents                                                |
 |---------------|--------------------------------------------------------|
 | ``.base``     |the directory from which the relative path is calculated|
+| **``.basename``** |the filename without its path                       |
 | ``.cwd``      |the original working directory when the file was created|
+| **``.dirname``**  |the directory portion of ``path``                   |
+| **``.extname``**  |the file extension                                  |
+| **``.history``**  |history of ``.path`` values                         |
 | ``.path``     |the file's *absolute* filesystem path                   |
 | ``.relative`` |the file's ``.path``, *relative* to its ``.base``       |
 | ``.stat``     |the file's filesystem stat                              |
+| **``.stem``**    |the file's ``.basename``, minus its extension        |
+| **``.symlink``** |the file's symlink target, if applicable             |
 | ``._contents``|private property for the file's contents                |
 | ``.isBuffer``     |method of ``vinyl`` file objects|
+| **``.isCustomProp``** |method of ``vinyl`` file objects|
 | ``.isNull``       |method of ``vinyl`` file objects|
 | ``.isStream``     |method of ``vinyl`` file objects|
+| **``.isSymbolic``** |method of ``vinyl`` file objects|
+| **``.isVinyl``**  |method of ``vinyl`` file objects|
 | ``.isDirectory``  |method of ``vinyl`` file objects|
-| ``.pipe``         |method of ``vinyl`` file objects|
 | ``.inspect``      |method of ``vinyl`` file objects|
 | ``.clone``        |method of ``vinyl`` file objects|
 
